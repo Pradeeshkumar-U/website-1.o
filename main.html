@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Minimal E‑commerce Demo</title>
+  <meta name="description" content="Single-file e-commerce demo with HTML, CSS and vanilla JavaScript" />
+  <style>
+    /* ---------- Simple Reset ---------- */
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{background:#f6f7fb;color:#0f172a;line-height:1.4}
+
+    /* ---------- Layout ---------- */
+    .container{max-width:1100px;margin:28px auto;padding:20px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#6ee7b7,#60a5fa);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    h1{font-size:20px}
+
+    .searchbar{flex:1;margin-left:20px;display:flex;gap:8px}
+    .searchbar input{flex:1;padding:10px 12px;border:1px solid #e6e9ef;border-radius:10px}
+
+    .cart-btn{position:relative;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;cursor:pointer;border:none}
+    .cart-count{position:absolute;top:-8px;right:-8px;background:#ef4444;color:white;border-radius:999px;padding:4px 7px;font-size:12px}
+
+    /* ---------- Main ---------- */
+    .main{display:grid;grid-template-columns:240px 1fr;gap:18px}
+    aside{background:white;padding:16px;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06)}
+    .filters label{display:block;margin-bottom:8px;font-weight:600}
+    select,input[type=checkbox]{width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ef}
+
+    section{min-height:60vh}
+    .controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .products{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+
+    .card{background:white;border-radius:12px;padding:12px;box-shadow:0 6px 18px rgba(15,23,42,0.04);display:flex;flex-direction:column}
+    .card img{width:100%;height:150px;object-fit:cover;border-radius:8px;margin-bottom:10px}
+    .card .title{font-weight:600;margin-bottom:6px}
+    .card .meta{font-size:13px;color:#6b7280;margin-bottom:10px}
+    .card .price{font-weight:700;margin-bottom:10px}
+    .card button{margin-top:auto;padding:10px;border-radius:10px;border:none;background:#111827;color:white;cursor:pointer}
+
+    /* ---------- Cart Sidebar ---------- */
+    .cart-panel{position:fixed;right:20px;top:60px;width:360px;max-height:80vh;background:white;border-radius:12px;padding:16px;box-shadow:0 20px 50px rgba(2,6,23,0.25);overflow:auto;z-index:120}
+    .cart-item{display:flex;gap:10px;align-items:center;padding:10px 6px;border-bottom:1px dashed #eef2ff}
+    .cart-item img{width:56px;height:56px;border-radius:8px;object-fit:cover}
+    .qty{display:flex;align-items:center;gap:8px}
+    .qty button{width:28px;height:28px;border-radius:6px;border:1px solid #e6e9ef;background:white;cursor:pointer}
+
+    .cart-summary{padding-top:10px;margin-top:10px;border-top:1px solid #f1f5f9}
+    .muted{color:#6b7280;font-size:13px}
+
+    /* ---------- Modal (Checkout) ---------- */
+    .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;z-index:130}
+    .modal{width:520px;background:white;border-radius:12px;padding:18px}
+
+    /* ---------- Responsive ---------- */
+    @media (max-width:880px){
+      .main{grid-template-columns:1fr}
+      .searchbar{margin-left:10px}
+      .cart-panel{right:8px;width:320px}
+      .modal{width:92%}
+    }
+
+    /* ---------- Tiny helpers ---------- */
+    .btn-ghost{background:transparent;border:1px solid #e6e9ef;padding:8px;border-radius:8px;cursor:pointer}
+    .badge{display:inline-block;background:#eef2ff;color:#1e3a8a;padding:4px 8px;border-radius:999px;font-weight:600;font-size:12px}
+    .empty{text-align:center;padding:36px;color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="brand">
+        <div class="logo">EC</div>
+        <div>
+          <h1>Mini Shop</h1>
+          <div class="muted">Vanilla JS demo</div>
+        </div>
+      </div>
+
+      <div class="searchbar" style="max-width:560px;">
+        <input id="search" placeholder="Search products, e.g. headphones" aria-label="Search products">
+        <button class="btn-ghost" id="clearSearch">Clear</button>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-left:12px">
+        <button class="cart-btn" id="openCart">
+          Cart <span class="cart-count" id="cartCount">0</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="main">
+      <aside>
+        <div class="filters">
+          <label for="category">Category</label>
+          <select id="category">
+            <option value="All">All</option>
+          </select>
+
+          <label for="sort" style="margin-top:12px">Sort</label>
+          <select id="sort">
+            <option value="popular">Popular</option>
+            <option value="price-asc">Price: Low → High</option>
+            <option value="price-desc">Price: High → Low</option>
+            <option value="rating">Top Rated</option>
+          </select>
+
+          <div style="margin-top:16px">
+            <label class="muted">Quick tip</label>
+            <p class="muted" style="margin-top:6px">Add items to the cart, open the Cart to change quantities, then Checkout to place a fake order.</p>
+          </div>
+        </div>
+      </aside>
+
+      <section>
+        <div class="controls">
+          <div><strong id="results">0</strong> results</div>
+          <div class="muted">Free shipping over $200</div>
+        </div>
+
+        <div class="products" id="productGrid">
+          <!-- products rendered here -->
+        </div>
+
+        <div id="noResults" class="empty" style="display:none">No products match your search.</div>
+      </section>
+    </div>
+
+  </div>
+
+  <!-- Cart Panel (hidden by default) -->
+  <div id="cartPanel" class="cart-panel" style="display:none" aria-hidden="true">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <h3>Cart</h3>
+      <div>
+        <button class="btn-ghost" id="closeCart">Close</button>
+      </div>
+    </div>
+
+    <div id="cartItems"></div>
+
+    <div class="cart-summary">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><div class="muted">Subtotal</div><div id="subtotal">$0.00</div></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><div class="muted">Shipping</div><div id="shipping">$0.00</div></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:10px"><div class="muted">Taxes</div><div id="taxes">$0.00</div></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:18px;margin-bottom:10px"><div>Total</div><div id="total">$0.00</div></div>
+      <div style="display:flex;gap:8px">
+        <button id="checkoutBtn" style="flex:1;padding:10px;border-radius:10px;border:none;background:#10b981;color:white;cursor:pointer">Checkout</button>
+        <button id="clearCartBtn" class="btn-ghost">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Checkout Modal -->
+  <div id="overlay" class="overlay" style="display:none">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h3>Checkout</h3>
+      <p class="muted">This demo doesn't process payments — it's a simulated checkout.</p>
+      <div style="margin-top:12px">
+        <label class="muted">Full name</label>
+        <input id="fullname" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ef;margin-top:6px">
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <div style="flex:1">
+          <label class="muted">Email</label>
+          <input id="email" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ef;margin-top:6px">
+        </div>
+        <div style="width:120px">
+          <label class="muted">Zip</label>
+          <input id="zip" style="width:100%;padding:10px;border-radius:8px;border:1px solid #e6e9ef;margin-top:6px">
+        </div>
+      </div>
+
+      <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-ghost" id="cancelCheckout">Cancel</button>
+        <button id="placeOrderBtn" style="background:#111827;color:white;padding:10px;border-radius:8px;border:none">Place Order</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- Sample product data ----------
+    const PRODUCTS = [
+      { id:'p1', title:'Classic Leather Jacket', price:129.99, category:'Apparel', rating:4.6, image:'https://images.unsplash.com/photo-1520975689930-3b7a9f8f1a7d?w=900&q=60' },
+      { id:'p2', title:'Noise-Canceling Headphones', price:199.99, category:'Electronics', rating:4.8, image:'https://images.unsplash.com/photo-1518444026216-1b3a5b3c1f5d?w=900&q=60' },
+      { id:'p3', title:'Ceramic Coffee Mug (2-pack)', price:24.50, category:'Home', rating:4.3, image:'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=900&q=60' },
+      { id:'p4', title:'Running Shoes — Lightweight', price:89.00, category:'Apparel', rating:4.4, image:'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=900&q=60' },
+      { id:'p5', title:'Smartwatch Series 5', price:249.99, category:'Electronics', rating:4.5, image:'https://images.unsplash.com/photo-1516574187841-cb9cc2ca948b?w=900&q=60' },
+      { id:'p6', title:'Minimal Desk Lamp', price:39.99, category:'Home', rating:4.2, image:'https://images.unsplash.com/photo-1493666438817-866a91353ca9?w=900&q=60' }
+    ];
+
+    // ---------- State ----------
+    let cart = loadCart();
+
+    // ---------- DOM references ----------
+    const productGrid = document.getElementById('productGrid');
+    const resultsEl = document.getElementById('results');
+    const productCountBadge = document.getElementById('cartCount');
+    const cartPanel = document.getElementById('cartPanel');
+    const cartItemsEl = document.getElementById('cartItems');
+    const subtotalEl = document.getElementById('subtotal');
+    const shippingEl = document.getElementById('shipping');
+    const taxesEl = document.getElementById('taxes');
+    const totalEl = document.getElementById('total');
+    const openCartBtn = document.getElementById('openCart');
+    const closeCartBtn = document.getElementById('closeCart');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    const clearCartBtn = document.getElementById('clearCartBtn');
+    const overlay = document.getElementById('overlay');
+    const placeOrderBtn = document.getElementById('placeOrderBtn');
+    const cancelCheckout = document.getElementById('cancelCheckout');
+    const categorySelect = document.getElementById('category');
+    const sortSelect = document.getElementById('sort');
+    const searchInput = document.getElementById('search');
+    const clearSearch = document.getElementById('clearSearch');
+    const noResults = document.getElementById('noResults');
+
+    // ---------- Init ----------
+    populateCategories();
+    renderProducts(PRODUCTS);
+    updateCartUI();
+
+    // ---------- Events ----------
+    openCartBtn.addEventListener('click', () => { cartPanel.style.display='block'; cartPanel.setAttribute('aria-hidden','false'); });
+    closeCartBtn.addEventListener('click', () => { cartPanel.style.display='none'; cartPanel.setAttribute('aria-hidden','true'); });
+    clearCartBtn.addEventListener('click', () => { if(confirm('Clear the cart?')){ cart = {}; saveCart(); updateCartUI(); } });
+    checkoutBtn.addEventListener('click', () => { overlay.style.display='flex'; });
+    cancelCheckout.addEventListener('click', () => { overlay.style.display='none'; });
+    placeOrderBtn.addEventListener('click', placeOrder);
+
+    searchInput.addEventListener('input', applyFilters);
+    clearSearch.addEventListener('click', () => { searchInput.value=''; applyFilters(); });
+    categorySelect.addEventListener('change', applyFilters);
+    sortSelect.addEventListener('change', applyFilters);
+
+    // ---------- Functions ----------
+    function populateCategories(){
+      const cats = Array.from(new Set(PRODUCTS.map(p=>p.category)));
+      cats.forEach(c=>{
+        const opt = document.createElement('option'); opt.value=c; opt.textContent=c; categorySelect.appendChild(opt);
+      });
+    }
+
+    function renderProducts(list){
+      productGrid.innerHTML='';
+      if(list.length===0){ noResults.style.display='block'; resultsEl.textContent='0'; return; }
+      noResults.style.display='none';
+      resultsEl.textContent = list.length;
+      list.forEach(p=>{
+        const card = document.createElement('div'); card.className='card';
+        card.innerHTML = `
+          <img src="${p.image}" alt="${escapeHtml(p.title)}">
+          <div class="title">${escapeHtml(p.title)}</div>
+          <div class="meta">${escapeHtml(p.category)} • ⭐ ${p.rating.toFixed(1)}</div>
+          <div class="price">$${p.price.toFixed(2)}</div>
+          <button data-id="${p.id}">Add to cart</button>
+        `;
+        const btn = card.querySelector('button');
+        btn.addEventListener('click', ()=>{ addToCart(p.id,1); });
+        productGrid.appendChild(card);
+      });
+    }
+
+    function applyFilters(){
+      const q = searchInput.value.trim().toLowerCase();
+      const cat = categorySelect.value;
+      const sort = sortSelect.value;
+      let list = PRODUCTS.filter(p => p.title.toLowerCase().includes(q) || p.category.toLowerCase().includes(q));
+      if(cat !== 'All') list = list.filter(p => p.category === cat);
+      if(sort === 'price-asc') list.sort((a,b)=>a.price-b.price);
+      if(sort === 'price-desc') list.sort((a,b)=>b.price-a.price);
+      if(sort === 'rating') list.sort((a,b)=>b.rating-a.rating);
+      renderProducts(list);
+    }
+
+    function addToCart(productId, qty=1){
+      const p = PRODUCTS.find(x=>x.id===productId); if(!p) return;
+      if(!cart[productId]) cart[productId] = { product: p, qty: 0 };
+      cart[productId].qty += qty;
+      saveCart(); updateCartUI();
+      // open cart to show feedback
+      cartPanel.style.display='block'; cartPanel.setAttribute('aria-hidden','false');
+    }
+
+    function updateCartUI(){
+      // render items
+      cartItemsEl.innerHTML = '';
+      const items = Object.values(cart);
+      if(items.length===0){ cartItemsEl.innerHTML = '<div class="empty">Your cart is empty</div>' }
+      items.forEach(it=>{
+        const row = document.createElement('div'); row.className='cart-item';
+        row.innerHTML = `
+          <img src="${it.product.image}" alt="${escapeHtml(it.product.title)}">
+          <div style="flex:1">
+            <div style="font-weight:700">${escapeHtml(it.product.title)}</div>
+            <div class="muted">$${it.product.price.toFixed(2)}</div>
+          </div>
+          <div class="qty">
+            <button data-action="dec" data-id="${it.product.id}">-</button>
+            <div>${it.qty}</div>
+            <button data-action="inc" data-id="${it.product.id}">+</button>
+          </div>
+        `;
+        cartItemsEl.appendChild(row);
+      });
+
+      // attach qty handlers
+      cartItemsEl.querySelectorAll('button[data-action]').forEach(btn=>{
+        btn.addEventListener('click',(e)=>{
+          const id = btn.getAttribute('data-id'); const action = btn.getAttribute('data-action');
+          if(action==='inc') changeQty(id, 1); else changeQty(id, -1);
+        });
+      });
+
+      // totals
+      const subtotal = items.reduce((s,it)=>s + it.product.price * it.qty, 0);
+      const shipping = subtotal === 0 ? 0 : (subtotal > 200 ? 0 : 9.99);
+      const taxes = +(subtotal * 0.12).toFixed(2);
+      const total = +(subtotal + shipping + taxes).toFixed(2);
+
+      subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+      shippingEl.textContent = shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`;
+      taxesEl.textContent = `$${taxes.toFixed(2)}`;
+      totalEl.textContent = `$${total.toFixed(2)}`;
+
+      // cart count badge
+      const totalQty = items.reduce((n,it)=>n + it.qty, 0);
+      productCountBadge.textContent = totalQty;
+
+      // save silently
+      saveCart();
+    }
+
+    function changeQty(productId, delta){
+      if(!cart[productId]) return;
+      cart[productId].qty += delta;
+      if(cart[productId].qty <= 0) delete cart[productId];
+      saveCart(); updateCartUI();
+    }
+
+    function placeOrder(){
+      const fullname = document.getElementById('fullname').value.trim();
+      const email = document.getElementById('email').value.trim();
+      if(!fullname || !email){ alert('Please enter name and email to continue.'); return; }
+
+      const items = Object.values(cart);
+      if(items.length===0){ alert('Cart is empty.'); overlay.style.display='none'; return; }
+
+      const subtotal = items.reduce((s,it)=>s + it.product.price * it.qty, 0);
+      const shipping = subtotal > 200 ? 0 : (subtotal === 0 ? 0 : 9.99);
+      const taxes = +(subtotal * 0.12).toFixed(2);
+      const total = +(subtotal + shipping + taxes).toFixed(2);
+
+      const order = {
+        id: `ORD-${Date.now()}`,
+        date: new Date().toISOString(),
+        customer: { name: fullname, email },
+        items: items.map(it=>({ id: it.product.id, title: it.product.title, qty: it.qty, price: it.product.price })),
+        totals: { subtotal, shipping, taxes, total }
+      };
+
+      // in a real app you'd POST order to server; here we simulate success
+      console.log('Order placed', order);
+      alert(`Order placed — ${order.id}\nTotal: $${total.toFixed(2)}\nThanks ${fullname}!`);
+      cart = {}; saveCart(); updateCartUI(); overlay.style.display='none'; cartPanel.style.display='none';
+      // clear form
+      document.getElementById('fullname').value=''; document.getElementById('email').value=''; document.getElementById('zip').value='';
+    }
+
+    // ---------- Persistence helpers ----------
+    function saveCart(){
+      try{ localStorage.setItem('demo_cart_v1', JSON.stringify(cart)); }catch(e){ console.warn('localStorage failed',e); }
+    }
+    function loadCart(){
+      try{ return JSON.parse(localStorage.getItem('demo_cart_v1')) || {}; }catch(e){ return {}; }
+    }
+
+    // ---------- small utilities ----------
+    function escapeHtml(s){ return String(s).replace(/[&"'<>]/g, (c)=>({ '&':'&amp;','"':'&quot;',"'":'&#39;','<':'&lt;','>':'&gt;' }[c])); }
+
+    // ---------- small UX: clicking outside overlay hides it ----------
+    overlay.addEventListener('click', (e)=>{ if(e.target === overlay) overlay.style.display='none'; });
+
+    // ---------- initialize: show a few products by default ----------
+    // Render products already called at startup; attach add-to-cart behavior to pre-rendered
+    // But if the DOM has interactive elements added later, keep behavior dynamic via functions above.
+
+  </script>
+</body>
+</html>
